@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import prisma from "../../lib/prisma.js";
 import { successResponse, errorResponse } from "../../utils/response.js";
+import { supabase } from "../../utils/supabase.js";
+import { AuthRequest } from "../../middlewares/authMiddleware.js";
 
 // GET /api/v1/products
 export const getAllProducts = async (req: Request, res: Response) => {
@@ -124,6 +126,38 @@ export const deleteProduct = async (req: Request, res: Response) => {
     await prisma.product.delete({ where: { id } });
 
     return successResponse(res, "Produk berhasil dihapus");
+  } catch (error) {
+    console.error(error);
+    return errorResponse(res, "Terjadi kesalahan pada server", 500);
+  }
+};
+
+// POST /api/v1/products/upload  [admin]
+export const uploadProductImage = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return errorResponse(res, "Tidak ada file yang diunggah", 400);
+    }
+
+    const file = req.file;
+    const fileName = `${Date.now()}_${file.originalname.replace(/\s+/g, "_")}`;
+
+    const { data, error } = await supabase.storage
+      .from(process.env.SUPABASE_STORAGE_BUCKET || "bakery-images")
+      .upload(`products/${fileName}`, file.buffer, {
+        contentType: file.mimetype,
+      });
+
+    if (error) {
+      console.error("Supabase upload error:", error);
+      return errorResponse(res, "Gagal mengunggah file ke penyimpanan", 500);
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from(process.env.SUPABASE_STORAGE_BUCKET || "bakery-images")
+      .getPublicUrl(`products/${fileName}`);
+
+    return successResponse(res, "File berhasil diunggah", { url: publicUrlData.publicUrl }, 201);
   } catch (error) {
     console.error(error);
     return errorResponse(res, "Terjadi kesalahan pada server", 500);

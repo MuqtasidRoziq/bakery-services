@@ -4,6 +4,7 @@ import { AuthRequest } from "../../middlewares/authMiddleware.js";
 import { successResponse, errorResponse } from "../../utils/response.js";
 import { generateOrderNumber, calculateShippingCost } from "../../utils/helpers.js";
 import { PaymentMethod } from "@prisma/client";
+import { supabase } from "../../utils/supabase.js";
 
 // POST /api/v1/orders  [customer]
 export const createOrder = async (req: AuthRequest, res: Response) => {
@@ -52,10 +53,10 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     const shippingCost = calculateShippingCost(subtotal);
     const totalPrice = subtotal + shippingCost;
 
-    let paymentStatus: "UNPAID" | "PENDING" = "UNPAID";
+    let paymentStatus: "UNPAID" | "PENDING" | "PAID" = "UNPAID";
     if (paymentMethod) {
       if (proofImageUrl) {
-        paymentStatus = "PENDING";
+        paymentStatus = "PAID";
       }
     }
 
@@ -85,16 +86,59 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
           status: paymentStatus,
           referenceNumber: referenceNumber || null,
           proofImageUrl: proofImageUrl || null,
+          paidAt: paymentStatus === "PAID" ? new Date() : null,
         }
       };
     }
 
-    const order = await prisma.order.create({
-      data: orderData,
-      include: { items: true, payment: true },
-    });
+    const stockUpdates = (items as Array<{ productId: string; quantity: number }>).map((item) => 
+      prisma.product.update({
+        where: { id: item.productId },
+        data: { stock: { decrement: item.quantity } }
+      })
+    );
+
+    const [order] = await prisma.$transaction([
+      prisma.order.create({
+        data: orderData,
+        include: { items: true, payment: true },
+      }),
+      ...stockUpdates
+    ]);
 
     return successResponse(res, "Order berhasil dibuat", { order }, 201);
+  } catch (error) {
+    console.error(error);
+    return errorResponse(res, "Terjadi kesalahan pada server", 500);
+  }
+};
+
+// POST /api/v1/orders/upload  [customer]
+export const uploadPaymentProof = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return errorResponse(res, "Tidak ada file yang diunggah", 400);
+    }
+
+    const file = req.file;
+    const fileName = `${Date.now()}_${file.originalname.replace(/\s+/g, "_")}`;
+
+    const { data, error } = await supabase.storage
+      .from(process.env.SUPABASE_STORAGE_BUCKET || "bakery-images")
+      .upload(`payments/${fileName}`, file.buffer, {
+        contentType: file.mimetype,
+      });
+
+    if (error) {
+      console.error("Supabase upload error:", error);
+      return errorResponse(res, "Gagal mengunggah file ke penyimpanan", 500);
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from(process.env.SUPABASE_STORAGE_BUCKET || "bakery-images")
+      .getPublicUrl(`payments/${fileName}`);
+
+    return successResponse(res, "File berhasil diunggah", { url: publicUrlData.publicUrl }, 201);
   } catch (error) {
     console.error(error);
     return errorResponse(res, "Terjadi kesalahan pada server", 500);
@@ -214,14 +258,15 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
           userId,
           amount: order.totalPrice,
           method: method as PaymentMethod,
-          status: "PENDING",
+          status: "PAID", // Otomatis PAID jika user upload bukti
           referenceNumber,
           proofImageUrl,
+          paidAt: new Date(),
         },
       }),
       prisma.order.update({
         where: { id: orderId },
-        data: { paymentStatus: "PENDING" },
+        data: { paymentStatus: "PAID" },
       }),
     ]);
 
