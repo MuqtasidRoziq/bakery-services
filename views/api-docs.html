@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bakery Services API Documentation</title>
+    <!-- Swagger UI CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css" />
+    <style>
+        body { margin: 0; padding: 0; background: #fafafa; }
+        .swagger-ui .topbar { display: none; }
+    </style>
+</head>
+<body>
+    <div id="swagger-ui"></div>
+
+    <!-- Swagger UI JS Bundle -->
+    <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
+    <script>
+        window.onload = function() {
+            // Spesifikasi OpenAPI (Swagger) untuk semua endpoint Bakery Services
+            const spec = {
+                "openapi": "3.0.0",
+                "info": {
+                    "title": "Bakery Services API",
+                    "version": "1.0.0",
+                    "description": "Dokumentasi interaktif untuk REST API Bakery Services.\n\nKlik tombol **Authorize** di bawah dan masukkan **Firebase ID Token** (didapatkan setelah login) untuk menguji API yang membutuhkan autentikasi (seperti profil, keranjang, order, dsb)."
+                },
+                "servers": [
+                    {
+                        "url": "http://localhost:3000/api/v1",
+                        "description": "Local Development Server"
+                    },
+                    {
+                        "url": "https://bakeryhub.netlify.app/api/v1",
+                        "description": "Production Server"
+                    }
+                ],
+                "components": {
+                    "securitySchemes": {
+                        "bearerAuth": {
+                            "type": "http",
+                            "scheme": "bearer",
+                            "bearerFormat": "JWT",
+                            "description": "Masukkan Firebase ID Token (JWT) yang didapat setelah login."
+                        }
+                    }
+                },
+                "security": [
+                    { "bearerAuth": [] }
+                ],
+                "paths": {
+                    // ─── AUTHENTICATION ───
+                    "/auth/register": {
+                        "post": {
+                            "tags": ["Authentication"],
+                            "summary": "Registrasi pengguna baru (Customer)",
+                            "security": [],
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "email": { "type": "string", "example": "budi@example.com" },
+                                                "password": { "type": "string", "example": "password123" },
+                                                "displayName": { "type": "string", "example": "Budi Santoso" },
+                                                "phoneNumber": { "type": "string", "example": "08123456789" }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": { "201": { "description": "Registrasi berhasil" } }
+                        }
+                    },
+                    "/auth/login": {
+                        "post": {
+                            "tags": ["Authentication"],
+                            "summary": "Login pengguna",
+                            "security": [],
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "email": { "type": "string", "example": "budi@example.com" },
+                                                "password": { "type": "string", "example": "password123" }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": { "200": { "description": "Login berhasil dan mengembalikan token" } }
+                        }
+                    },
+                    "/auth/me": {
+                        "get": {
+                            "tags": ["Authentication"],
+                            "summary": "Mendapatkan data user login saat ini",
+                            "responses": { "200": { "description": "Berhasil mendapatkan data user" } }
+                        }
+                    },
+
+                    // ─── USERS ───
+                    "/users/profile": {
+                        "get": {
+                            "tags": ["Users"],
+                            "summary": "Mendapatkan profil pengguna",
+                            "responses": { "200": { "description": "Berhasil mendapatkan profil" } }
+                        },
+                        "put": {
+                            "tags": ["Users"],
+                            "summary": "Mengupdate profil pengguna",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "displayName": { "type": "string" },
+                                                "phoneNumber": { "type": "string" },
+                                                "photoUrl": { "type": "string" }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": { "200": { "description": "Berhasil update profil" } }
+                        }
+                    },
+                    "/users/addresses": {
+                        "post": {
+                            "tags": ["Users"],
+                            "summary": "Menambahkan alamat pengiriman",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "label": { "type": "string", "example": "Rumah" },
+                                                "street": { "type": "string", "example": "Jl. Kemerdekaan No. 45" },
+                                                "city": { "type": "string", "example": "Jakarta" }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": { "201": { "description": "Berhasil tambah alamat" } }
+                        }
+                    },
+                    "/users/addresses/{index}": {
+                        "delete": {
+                            "tags": ["Users"],
+                            "summary": "Menghapus alamat berdasarkan index",
+                            "parameters": [
+                                { "name": "index", "in": "path", "required": true, "schema": { "type": "integer" } }
+                            ],
+                            "responses": { "200": { "description": "Alamat berhasil dihapus" } }
+                        }
+                    },
+
+                    // ─── PRODUCTS ───
+                    "/products": {
+                        "get": {
+                            "tags": ["Products"],
+                            "summary": "Mendapatkan daftar semua produk",
+                            "security": [],
+                            "responses": { "200": { "description": "Berhasil mendapatkan produk" } }
+                        },
+                        "post": {
+                            "tags": ["Products"],
+                            "summary": "[Admin] Menambahkan produk baru",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "name": { "type": "string", "example": "Roti Coklat" },
+                                                "price": { "type": "number", "example": 15000 },
+                                                "stock": { "type": "integer", "example": 10 },
+                                                "categoryId": { "type": "string" }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": { "201": { "description": "Produk berhasil ditambahkan" } }
+                        }
+                    },
+                    "/products/categories": {
+                        "get": {
+                            "tags": ["Products"],
+                            "summary": "Mendapatkan daftar semua kategori",
+                            "security": [],
+                            "responses": { "200": { "description": "Berhasil mendapatkan kategori" } }
+                        },
+                        "post": {
+                            "tags": ["Products"],
+                            "summary": "[Admin] Membuat kategori baru",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "name": { "type": "string", "example": "Roti Manis" },
+                                                "description": { "type": "string" }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": { "201": { "description": "Berhasil buat kategori" } }
+                        }
+                    },
+                    "/products/{id}": {
+                        "get": {
+                            "tags": ["Products"],
+                            "summary": "Mendapatkan detail suatu produk berdasarkan ID",
+                            "security": [],
+                            "parameters": [
+                                { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+                            ],
+                            "responses": { "200": { "description": "Detail produk" } }
+                        },
+                        "patch": {
+                            "tags": ["Products"],
+                            "summary": "[Admin] Mengupdate produk",
+                            "parameters": [
+                                { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+                            ],
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "price": { "type": "number" },
+                                                "stock": { "type": "integer" }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": { "200": { "description": "Berhasil update produk" } }
+                        },
+                        "delete": {
+                            "tags": ["Products"],
+                            "summary": "[Admin] Menghapus produk",
+                            "parameters": [
+                                { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+                            ],
+                            "responses": { "200": { "description": "Berhasil hapus produk" } }
+                        }
+                    },
+
+                    // ─── CART ───
+                    "/cart": {
+                        "get": {
+                            "tags": ["Cart"],
+                            "summary": "Mendapatkan isi keranjang",
+                            "responses": { "200": { "description": "Berhasil mendapatkan keranjang" } }
+                        },
+                        "post": {
+                            "tags": ["Cart"],
+                            "summary": "Menambahkan produk ke keranjang",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "productId": { "type": "string", "example": "id-produk" },
+                                                "quantity": { "type": "integer", "example": 1 }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": { "201": { "description": "Berhasil tambah ke keranjang" } }
+                        },
+                        "delete": {
+                            "tags": ["Cart"],
+                            "summary": "Kosongkan seluruh keranjang",
+                            "responses": { "200": { "description": "Keranjang dikosongkan" } }
+                        }
+                    },
+                    "/cart/{itemId}": {
+                        "put": {
+                            "tags": ["Cart"],
+                            "summary": "Ubah kuantitas item di keranjang",
+                            "parameters": [
+                                { "name": "itemId", "in": "path", "required": true, "schema": { "type": "string" } }
+                            ],
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "quantity": { "type": "integer", "example": 2 }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": { "200": { "description": "Kuantitas berhasil diubah" } }
+                        },
+                        "delete": {
+                            "tags": ["Cart"],
+                            "summary": "Hapus 1 item dari keranjang",
+                            "parameters": [
+                                { "name": "itemId", "in": "path", "required": true, "schema": { "type": "string" } }
+                            ],
+                            "responses": { "200": { "description": "Berhasil dihapus dari keranjang" } }
+                        }
+                    },
+
+                    // ─── ORDERS ───
+                    "/orders": {
+                        "post": {
+                            "tags": ["Orders"],
+                            "summary": "Membuat order baru (Checkout)",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "customerName": { "type": "string" },
+                                                "customerPhone": { "type": "string" },
+                                                "shippingAddress": { "type": "object" },
+                                                "items": { "type": "array", "items": { "type": "object" } }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": { "201": { "description": "Order berhasil dibuat" } }
+                        },
+                        "get": {
+                            "tags": ["Orders"],
+                            "summary": "[Admin] Mendapatkan semua pesanan",
+                            "responses": { "200": { "description": "Daftar pesanan admin" } }
+                        }
+                    },
+                    "/orders/my": {
+                        "get": {
+                            "tags": ["Orders"],
+                            "summary": "Mendapatkan riwayat order milik user",
+                            "responses": { "200": { "description": "Riwayat order user" } }
+                        }
+                    },
+                    "/orders/{id}": {
+                        "get": {
+                            "tags": ["Orders"],
+                            "summary": "Mendapatkan detail suatu order (Bisa diakses pemilik order atau Admin)",
+                            "parameters": [
+                                { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+                            ],
+                            "responses": { "200": { "description": "Detail order" } }
+                        }
+                    },
+                    "/orders/{id}/cancel": {
+                        "patch": {
+                            "tags": ["Orders"],
+                            "summary": "Membatalkan order",
+                            "parameters": [
+                                { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+                            ],
+                            "responses": { "200": { "description": "Order dibatalkan" } }
+                        }
+                    },
+                    "/orders/{id}/payment": {
+                        "post": {
+                            "tags": ["Orders"],
+                            "summary": "Mengajukan pembayaran untuk suatu order",
+                            "parameters": [
+                                { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+                            ],
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "method": { "type": "string", "example": "TRANSFER" },
+                                                "referenceNumber": { "type": "string" },
+                                                "proofImageUrl": { "type": "string" }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": { "201": { "description": "Pembayaran berhasil diajukan" } }
+                        }
+                    },
+                    "/orders/{id}/status": {
+                        "patch": {
+                            "tags": ["Orders"],
+                            "summary": "[Admin] Mengubah status order (PENDING, PROCESSING, SHIPPED, dll)",
+                            "parameters": [
+                                { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+                            ],
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": { "type": "string", "example": "PROCESSING" }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": { "200": { "description": "Status diubah" } }
+                        }
+                    },
+                    "/orders/payments/{paymentId}/confirm": {
+                        "patch": {
+                            "tags": ["Orders"],
+                            "summary": "[Admin] Mengkonfirmasi pembayaran",
+                            "parameters": [
+                                { "name": "paymentId", "in": "path", "required": true, "schema": { "type": "string" } }
+                            ],
+                            "responses": { "200": { "description": "Pembayaran dikonfirmasi" } }
+                        }
+                    },
+
+                    // ─── ADMIN ───
+                    "/admin/users": {
+                        "get": {
+                            "tags": ["Admin"],
+                            "summary": "[Admin] Melihat semua pengguna terdaftar",
+                            "responses": { "200": { "description": "Daftar pengguna" } }
+                        }
+                    },
+                    "/admin/users/{id}/set-admin": {
+                        "post": {
+                            "tags": ["Admin"],
+                            "summary": "[Admin] Menjadikan seorang pengguna sebagai Admin",
+                            "parameters": [
+                                { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+                            ],
+                            "responses": { "200": { "description": "Berhasil dijadikan Admin" } }
+                        },
+                        "delete": {
+                            "tags": ["Admin"],
+                            "summary": "[Admin] Mencabut akses Admin dari seorang pengguna",
+                            "parameters": [
+                                { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+                            ],
+                            "responses": { "200": { "description": "Akses Admin dicabut" } }
+                        }
+                    },
+                    "/admin/users/{id}/deactivate": {
+                        "patch": {
+                            "tags": ["Admin"],
+                            "summary": "[Admin] Menonaktifkan (deactivate) akun pengguna",
+                            "parameters": [
+                                { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+                            ],
+                            "responses": { "200": { "description": "Akun dinonaktifkan" } }
+                        }
+                    }
+                }
+            };
+            
+            // Render Swagger UI
+            SwaggerUIBundle({
+                spec: spec,
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIBundle.SwaggerUIStandalonePreset
+                ],
+                layout: "BaseLayout"
+            });
+        };
+    </script>
+</body>
+</html>
